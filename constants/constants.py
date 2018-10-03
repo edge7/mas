@@ -1,0 +1,6 @@
+PATH = "/home/edge7/Downloads/mql4/"
+OUT = "OUT"
+ACTION = "action"
+FLAG_GO = "flag_go"
+DONE = "strategy_done"
+ORDERS = "orders"
