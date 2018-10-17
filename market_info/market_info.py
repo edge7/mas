@@ -1,6 +1,6 @@
 from dateutil.parser import parse
 
-CROSS = "USDJPY_"
+CROSS = "NZDUSD_"
 from copy import deepcopy
 
 LONG_TREND = CROSS + 'DISTAVG200'
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def in_pips(param):
-    if 'JPY' in CROSS:
+    if 'JPY' in CROSS or 'XAU' in CROSS:
         multiply = 100.0
     else:
         multiply = 10000.0
@@ -23,10 +23,10 @@ def in_pips(param):
 
 
 def get_pips(body):
-    if 'JPY' in CROSS:
+    if 'JPY' in CROSS or 'XAU' in CROSS :
         multiply = 100.0
     else:
-        multiply = 1000.0
+        multiply = 10000.0
     return body * multiply
 
 
@@ -39,6 +39,7 @@ class CandleStickInfo(object):
         self.mi = mi
 
     def search_patterns(self):
+        return
         self.spinning_tops = self.search_spinning_top()
         self.marubozu = self.search_marubozu()
         self.hammer = self.search_hammer()
@@ -46,9 +47,9 @@ class CandleStickInfo(object):
         self.inverted_hammer = self.search_inverted_hammer()
         self.shooting_start = self.search_shooting_star()
         self.bullish_engulfing = self.search_bullish_engulfing()
-        self.bullish_engulfing = False
+
         self.bearish_engulfing = self.search_bearish_engulfing()
-        self.bearish_engulfing = False
+
 
         self.tweezer_bottoms = self.search_tweez_bot()
         self.tweezer_tops = self.search_tweez_top()
@@ -58,6 +59,9 @@ class CandleStickInfo(object):
         self.three_black = self.search_three_black()
         self.three_ins_up = self.search_3_up()
         self.three_ins_down = self.search_3_down()
+        self.dragonfly = self.search_dragonfly_doji()
+        self.gravestone = self.search_gravestone_doji()
+
 
     def search_spinning_top(self):
         last_body = abs(self.get_body(1))
@@ -86,7 +90,7 @@ class CandleStickInfo(object):
 
     def search_marubozu(self):
         last_body = abs(self.get_body(1))
-        if get_pips(abs(last_body)) < 10.0: return None
+        if get_pips(abs(last_body)) < 13.0: return None
         last_high = self.get_high(1)
         last_low = self.get_low(1)
         if last_high * self.MAR < last_body and last_body > last_low * self.MAR:
@@ -183,7 +187,7 @@ class CandleStickInfo(object):
         last_body = self.get_body(1)
         previous_body = self.get_body(2)
         pips_body = get_pips(abs(last_body))
-        if pips_body > 8 and last_body > 0 > previous_body and abs(last_body) > abs(previous_body) * 1.5:
+        if pips_body > 12 and last_body > 0 > previous_body and abs(last_body) > abs(previous_body) * 1.5:
             logger.info("Bullish engulfing candle")
             return True
 
@@ -197,7 +201,7 @@ class CandleStickInfo(object):
         last_body = self.get_body(1)
         previous_body = self.get_body(2)
         pips_body = abs(get_pips(last_body))
-        if pips_body > 8 and last_body < 0 < previous_body and abs(last_body) > abs(previous_body) * 1.5:
+        if pips_body > 12 and last_body < 0 < previous_body and abs(last_body) > abs(previous_body) * 1.5:
             logger.info("Bearish engulfing candle")
             return True
 
@@ -247,6 +251,33 @@ class CandleStickInfo(object):
             logger.info("Evening Star")
             return True
         return False
+
+    def search_dragonfly_doji(self):
+        close = self.get_close(1)
+        close_ago = self.get_close(4)
+        close_ago_ago = self.get_close(7)
+        close_ago_ago_ago = self.get_close(13)
+        if close < close_ago and close < close_ago_ago and close < close_ago_ago_ago:
+            body = self.get_body(1)
+            high = self.get_high(1)
+            low = self.get_low(1)
+            if abs(body) < in_pips(5) < low and high < in_pips(5) and low * 0.75 > high and get_pips(low) > 10:
+                return True
+        return False
+
+    def search_gravestone_doji(self):
+        close = self.get_close(1)
+        close_ago = self.get_close(4)
+        close_ago_ago = self.get_close(7)
+        close_ago_ago_ago = self.get_close(13)
+        if close > close_ago and close > close_ago_ago and close > close_ago_ago_ago:
+            body = self.get_body(1)
+            high = self.get_high(1)
+            low = self.get_low(1)
+            if abs(body) < in_pips(5) < high and low < in_pips(5) and high * 0.75 > low and get_pips(high) > 10:
+                return True
+        return False
+
 
     def search_moning_star(self):
         is_bearish = -1
@@ -358,6 +389,7 @@ class MarketInfo(object):
         return self.df[CROSS + 'OPEN'].iloc[-1 * i]
 
     def search_for_info(self):
+        return
         #self.read_news()
         self.search_for_short_trend()
         self.search_long_trend()
@@ -368,7 +400,7 @@ class MarketInfo(object):
         self.search_low_band_50()
         self.search_regime_switching()
         self.search_dist_short()
-        self.candle_info = CandleStickInfo(self.remove(deepcopy(self.df.tail(10))), self)
+        self.candle_info = CandleStickInfo(self.remove(deepcopy(self.df.tail(200))), self)
         self.candle_info.search_patterns()
 
     def search_dist_short(self):
