@@ -1,6 +1,6 @@
 from dateutil.parser import parse
 
-CROSS = "NZDUSD_"
+CROSS = "USDJPY_"
 from copy import deepcopy
 
 LONG_TREND = CROSS + 'DISTAVG200'

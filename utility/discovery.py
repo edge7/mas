@@ -1,15 +1,47 @@
 import logging
 import datetime
+from itertools import groupby
+from iteration_utilities import all_monotone
+
 from dateutil.parser import parse
 import pandas as pd
 from utility.mql4_socket import write_sup_res
+from scipy import stats
+import numpy as np
 
-TP = 30
-SL = 20
+BARAGO = 10000000
+
+TP = 45
+SL = 25
 
 logger = logging.getLogger(__name__)
 
 from market_info.market_info import MarketInfo, LONG_TREND, CROSS, get_pips
+
+slopes = []
+counter = 0
+
+
+def check_channel(mi):
+    global counter
+    counter = counter + 1
+    df = mi.df
+    # Get last 100 close
+    last_closes = df[CROSS + "CLOSE"].rolling(window=1).mean().iloc[-50:].values
+    x = np.arange(1, 51)
+    slope_big, intercept, r_value, p_value, std_err = stats.linregress(x, last_closes)
+
+    last_closes = df[CROSS + "CLOSE"].rolling(window=1).mean().iloc[-50:].values
+    x = np.arange(1, 51)
+    slope_s, intercept, r_value, p_value, std_err = stats.linregress(x, last_closes)
+
+    if counter == 50:
+        print(slope_s)
+        counter = 0
+    if slope_big < 0 and slope_s < 0:
+        return "BUY"
+    if slope_big > 0 and slope_s > 0:
+        return "SELL"
 
 
 def get_info(df, news):
@@ -38,8 +70,8 @@ def search_for_bullish_and_bearish_candlestick(market_info):
     if market_info.bullish_engulfing:
         bullish['bullish_eng'] = True
 
-    if market_info.bearish_engulfing:
-        bearish['bearish_eng'] = True
+    # if market_info.bearish_engulfing: 'superata_da_
+    #    bearish['bearish_eng'] = True
 
     if market_info.tweezer_tops:
         bullish['tweezer_tops'] = True
@@ -317,10 +349,6 @@ def search_for_buy_sell_comb(market_infos):
         buy += 1
 
     if at_least_one(market_infos, 'sopra_e_ancora_piu_sopra_short') and \
-            at_least_one(market_infos, 'sotto_ma_avvicinando_long'):
-        buy += 1
-
-    if at_least_one(market_infos, 'sopra_e_ancora_piu_sopra_short') and \
             at_least_one(market_infos, 'sopra_e_ancora_piu_sopra_long'):
         buy += 2
 
@@ -368,114 +396,6 @@ def search_for_buy_sell_comb(market_infos):
     return res
 
 
-def describe_what_is_going_on(market, start, end):
-    import copy
-
-    RANGING_THRES = 30  # Improve
-    TREND_THRES = 50  # Improve
-    if end is not None:
-        market = market.iloc[start:end]
-    else:
-        market = market.iloc[start:]
-    max = market.max()
-    min = market.min()
-    mean = market.mean()
-    last = market.iloc[-1]
-    first = market.iloc[0]
-    range_ = abs(max - min)
-    ranging = False
-    down = False
-    up = False
-    if get_pips(range_) < RANGING_THRES:
-        ranging = True
-    if last - first < 0 and get_pips(abs(last - first)) > TREND_THRES:
-        down = True
-    if last - first > 0 and get_pips(abs(last - first)) > TREND_THRES:
-        up = True
-
-    res = []
-    supp = []
-    THRE = 85
-
-    def confirm_res(l, base):
-        for i in range(1, 6):
-            res = get_pips(l[base] - l[base + i])
-            if res > THRE:
-                return True
-            if res < 0:
-                return False
-        return False
-
-    def confirm_supp(l, base):
-        for i in range(1, 5):
-            res = get_pips(l[base + i] - l[base])
-            if res > THRE:
-                return True
-            if res < 0:
-                return False
-        return False
-
-    l = list(market)
-    for index, value in enumerate(l):
-        if index == 0: continue
-        THRE = 4460
-        try:
-            if l[index - 1] < l[index] and (get_pips(l[index - 1] - l[index + 1]) > THRE or get_pips(
-                    l[index - 1] - l[index + 2]) > THRE) or get_pips(
-                l[index - 1] - l[index + 4]) > THRE:
-                res.append(l[index - 1])
-        except Exception:
-            pass
-        try:
-            if l[index - 1] > l[index] and (get_pips(l[index + 1] - l[index - 1]) > THRE or get_pips(
-                    l[index + 2] - l[index - 1]) > THRE) or get_pips(l[index + 4] - l[index - 1]) > THRE:
-                supp.append(
-                    l[index - 1])
-
-        except Exception:
-            pass
-
-    orig = copy.deepcopy(supp)
-    new_supp = copy.deepcopy(supp)
-
-    notmod = False
-    while not notmod:
-        notmod = True
-        for item in supp:
-            for jitem in supp:
-                if item != jitem and get_pips(abs(item - jitem)) < 15:
-                    if item in new_supp:
-                        new_supp.remove(item)
-                    if jitem in new_supp:
-                        new_supp.remove(jitem)
-                    m = round((item + jitem) / 2, 5)
-                    if m not in new_supp:
-                        notmod = False
-                        new_supp.append(m)
-        supp = new_supp
-
-    orig = copy.deepcopy(res)
-    new_res = copy.deepcopy(res)
-
-    notmod = False
-    while not notmod:
-        notmod = True
-        for item in res:
-            for jitem in res:
-                if item != jitem and get_pips(abs(item - jitem)) < 15:
-                    if item in new_res:
-                        new_res.remove(item)
-                    if jitem in new_res:
-                        new_res.remove(jitem)
-                    m = round((item + jitem) / 2, 5)
-                    if m not in new_res:
-                        notmod = False
-                        new_res.append(m)
-        res = new_res
-
-    return ranging, up, down, res, supp, list(set(res + supp))
-
-
 def mas(item, p, mi):
     last_closes = mi.df[CROSS + "CLOSE"].tail(20)
     last_closes_10 = mi.df[CROSS + "CLOSE"].tail(10)
@@ -504,7 +424,7 @@ def mas(item, p, mi):
 
 def analyse(last_45, last_25, before, price, candles, df):
     debug = True
-    gu = False
+    gu = False15
     gd = False
     if df.get_close(1) < df.get_close(6) and df.get_close(1) < df.get_close(3):
         gd = True
@@ -801,7 +721,6 @@ xx = []
 jr = False
 
 
-
 def search_buy_sell_mas3(market_infos):
     global cc
     global xx
@@ -845,17 +764,54 @@ def cazzo_fo(balances):
 no_trade = 0
 last = None
 
+
 def is_not_asian(time):
-    from dateutil.parser import parse
     time = parse(time).time()
     current_hour = time.hour
-    if current_hour > 21 or current_hour < 6:
+    if current_hour > 23 or current_hour <= 7:
         return False
     return True
 
-def check_asian_orders(market, reverse = False):
+
+def is_london_time(time):
+    from dateutil.parser import parse
+    time = parse(time).time()
+    current_hour = time.hour
+    if current_hour > 6 and current_hour <= 9:
+        return True
+    return False
+
+
+def is_asian_time(time):
+    from dateutil.parser import parse
+    time = parse(time).time()
+    current_hour = time.hour
+    if current_hour > 21 or current_hour <= 7:
+        return True
+    return False
+
+
+def is_ny_time(time):
+    from dateutil.parser import parse
+    time = parse(time).time()
+    current_hour = time.hour
+    if current_hour > 20 or current_hour < 7:
+        return True
+    return False
+
+
+def is_out_time(time):
+    from dateutil.parser import parse
+    time = parse(time).time()
+    current_hour = time.hour
+    if current_hour > 12 and current_hour < 16:
+        return True
+    return False
+
+
+def check_asian_orders(market, reverse=False):
     current_price = market.df[CROSS + "CLOSE"].iloc[-1]
-    current_big_avg =  market.df[CROSS + "CLOSE"].ewm(span=250).mean().iloc[-1]
+    current_big_avg = market.df[CROSS + "CLOSE"].ewm(span=250).mean().iloc[-1]
     last_body = market.get_close(1)
     if last_body >= 0:
         high = market.df[CROSS + "CLOSE"] + market.df[CROSS + "HIGHINPIPS"]
@@ -866,25 +822,58 @@ def check_asian_orders(market, reverse = False):
 
     high = high.iloc[-1]
     low = low.iloc[-1]
-    current_up_avg = market.df[CROSS + "CLOSE"].rolling(window=50).mean() +  market.df[CROSS + "CLOSE"].rolling(window=50).std() * 1.8
-    current_down_avg = market.df[CROSS + "CLOSE"].rolling(window=50).mean() -  market.df[CROSS + "CLOSE"].rolling(window=50).std() * 1.8
+    current_up_avg = market.df[CROSS + "CLOSE"].rolling(window=50).mean() + market.df[CROSS + "CLOSE"].rolling(
+        window=50).std() * 1.8
+    current_down_avg = market.df[CROSS + "CLOSE"].rolling(window=50).mean() - market.df[CROSS + "CLOSE"].rolling(
+        window=50).std() * 1.8
     current_up_avg = current_up_avg.iloc[-1]
     current_down_avg = current_down_avg.iloc[-1]
-    if (low <= current_down_avg) and (current_price > current_big_avg) and (current_price<current_down_avg):
+    if (low <= current_down_avg) and (current_price > current_big_avg) and (current_price < current_down_avg):
         return "BUY"
-    if (high >= current_up_avg) and (current_price < current_big_avg) and (current_price>current_up_avg):
+    if (high >= current_up_avg) and (current_price < current_big_avg) and (current_price > current_up_avg):
+        return "SELL"
+
+
+def check_asian_orders2(market, reverse=False):
+    current_price = market.df[CROSS + "CLOSE"].iloc[-1]
+    previous_price = market.df[CROSS + "CLOSE"].iloc[-2]
+    current_big_avg = market.df[CROSS + "CLOSE"].ewm(span=250).mean().iloc[-1]
+
+    last_body = market.get_close(1)
+    if last_body >= 0:
+        high = market.df[CROSS + "CLOSE"] + market.df[CROSS + "HIGHINPIPS"]
+        low = market.df[CROSS + "OPEN"] - market.df[CROSS + "LOWINPIPS"]
+    else:
+        high = market.df[CROSS + "OPEN"] + market.df[CROSS + "HIGHINPIPS"]
+        low = market.df[CROSS + "CLOSE"] - market.df[CROSS + "LOWINPIPS"]
+
+    high = high.iloc[-1]
+    low = low.iloc[-1]
+    current_up_avg_ = market.df[CROSS + "CLOSE"].rolling(window=50).mean() + market.df[CROSS + "CLOSE"].rolling(
+        window=50).std() * 1.8
+    current_down_avg_ = market.df[CROSS + "CLOSE"].rolling(window=50).mean() - market.df[CROSS + "CLOSE"].rolling(
+        window=50).std() * 1.8
+    current_up_avg = current_up_avg_.iloc[-1]
+    current_down_avg = current_down_avg_.iloc[-1]
+    previous_up_avg = current_up_avg_.iloc[-2]
+    previous_down_avg = current_down_avg_.iloc[-2]
+
+    if (previous_price > current_big_avg) and (current_price > current_down_avg) and (
+            previous_price < previous_down_avg):
+        return "BUY"
+    if (previous_price < current_big_avg) and (current_price < current_up_avg) and (previous_price > previous_up_avg):
         return "SELL"
 
 
 def optimize_asian(market):
     import copy
     m = copy.copy(market)
-    ori = market.df.copy(deep = True)
+    ori = market.df.copy(deep=True)
     ori["filt"] = ori["TIME"].apply(lambda x: not is_not_asian(x))
     asian = ori[ori["filt"] == True]
     for index in range(1, asian.shape[0]):
         m.df = asian.iloc[0:index]
-        res = check_asian_orders(m)
+        res = check_asian_orders2(m)
         if res == "SELL":
             last_pos = res
             last = 1
@@ -909,7 +898,7 @@ def check_for_ord(orders, bearish_candles, bullish_candles, market_infos, old, b
         profit = orders["PROFIT"].iloc[-1]
 
         open_at = orders["OPEN_AT"].iloc[-1]
-        if bar_ago > 15 and profit > 5 or (bar_ago>11 and profit<0):
+        if bar_ago > 15 and profit > 25 or (bar_ago > 25 and profit < 0):
             to_close = round(float(lots) / 1, 0)
             if to_close == 0.0:
                 to_close = lots
@@ -921,7 +910,7 @@ def check_for_ord(orders, bearish_candles, bullish_candles, market_infos, old, b
         current_time = market_infos[-1].df["TIME"].iloc[-1]
         if is_not_asian(current_time):
             return None, None, None, None, None, None, None, None
-        #optimize_asian(market_infos[-1])
+        # optimize_asian(market_infos[-1])
         res = check_asian_orders(market_infos[-1])
 
         if res == "BUY":
@@ -943,6 +932,371 @@ def check_for_ord(orders, bearish_candles, bullish_candles, market_infos, old, b
             return buy, sell, None, None, tp, sl, lots, None
 
     return None, None, None, None, None, None, None, None
+
+
+CANDLE = 15
+
+
+def check_lond_orders(mi):
+    df = pd.DataFrame.copy(mi.df)
+    last_big = mi.df[CROSS + "CLOSE"].ewm(span=500).mean().iloc[-1]
+    current_price = mi.get_close(1)
+    today = parse(df["TIME"].iloc[-1]).day
+    df = df.tail(200)
+
+    def is_today(x, today):
+        return (x.day == today) or (x.day == today - 1)
+
+    def is_asian(x):
+        return x.hour < 7 or x.hour > 21
+
+    df["TIME"] = df["TIME"].apply(lambda x: parse(x))
+    df = df[df["TIME"].apply(lambda x: is_today(x, today)) == True]
+    df_asian = df[df["TIME"].apply(lambda x: is_asian(x)) == True]
+    max_asian = df_asian[CROSS + "CLOSE"].max()
+    min_asian = df_asian[CROSS + "CLOSE"].min()
+
+    if current_price > max_asian + in_pips(5) and last_big < current_price:
+        return "BUY"
+    if current_price < min_asian - in_pips(5) and last_big > current_price:
+        return "SELL"
+
+
+def check_as_orders(mi):
+    df = pd.DataFrame.copy(mi.df)
+    last_big = mi.df[CROSS + "CLOSE"].ewm(span=100).mean().iloc[-1]
+    current_price = mi.get_close(1)
+    today = parse(df["TIME"].iloc[-1]).day
+    df = df.tail(200)
+
+    def is_today(x, today):
+        return (x.day == today) or (x.day == today - 1)
+
+    def is_london(x):
+        return x.hour > 7 or x.hour > 21
+
+    df["TIME"] = df["TIME"].apply(lambda x: parse(x))
+    df = df[df["TIME"].apply(lambda x: is_today(x, today)) == True]
+    df_asian = df[df["TIME"].apply(lambda x: is_london(x)) == True]
+    max_asian = df_asian[CROSS + "CLOSE"].max()
+    min_asian = df_asian[CROSS + "CLOSE"].min()
+
+    if current_price > max_asian + in_pips(5) and last_big < current_price:
+        return "SELL"
+    if current_price < min_asian - in_pips(5) and last_big > current_price:
+        return "BUY"
+
+
+def check_ny_orders(mi):
+    df = pd.DataFrame.copy(mi.df)
+    current_price = mi.get_close(1)
+    last_big = mi.df[CROSS + "CLOSE"].ewm(span=500).mean().iloc[-1]
+    today = parse(df["TIME"].iloc[-1]).day
+    df = df.tail(200)
+
+    def is_today(x, today):
+        return x.day == today
+
+    def is_london(x):
+        return 8 < x.hour < 13
+
+    df["TIME"] = df["TIME"].apply(lambda x: parse(x))
+    df = df[df["TIME"].apply(lambda x: is_today(x, today)) == True]
+    df_london = df[df["TIME"].apply(lambda x: is_london(x)) == True]
+    max_london = df_london[CROSS + "CLOSE"].max()
+    min_london = df_london[CROSS + "CLOSE"].min()
+
+    if current_price > max_london + in_pips(5) and current_price > last_big:
+        return "BUY"
+    if current_price < min_london - in_pips(5) and current_price < last_big:
+        return "SELL"
+
+
+def check_for_ord_break(orders, bearish_candles, bullish_candles, market_infos, old, balances):
+    if not orders.empty:
+        try:
+            seconds_bars = (
+                    parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(
+                market_infos[-1].df["TIME"].iloc[-2])).total_seconds()
+
+        except Exception:
+            seconds_bars = 1
+        if seconds_bars == 0: seconds_bars = 1
+        seconds_from_orders = (
+                parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(orders['TIME'].iloc[-1])).total_seconds()
+        bar_ago = int(seconds_from_orders / seconds_bars) + 1
+        id = str(orders["ID"].iloc[-1])
+        current_price = market_infos[-1].get_close(1)
+        lots = str(orders["LOTS"].iloc[-1])
+        profit = orders["PROFIT"].iloc[-1]
+
+        open_at = orders["OPEN_AT"].iloc[-1]
+        current_time = market_infos[-1].df["TIME"].iloc[-1]
+
+        if profit < -111110 and bar_ago < 2:
+            to_close = round(float(lots) / 2, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+        if is_ny_time(current_time):
+            to_close = round(float(lots) / 1, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+        if bar_ago > 15 and profit > 25 or (bar_ago > 25 and profit < 0):
+            to_close = round(float(lots) / 1, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+    if orders.empty:
+        current_time = market_infos[-1].df["TIME"].iloc[-1]
+        if not is_london_time(current_time) or is_ny_time(current_time):
+            return None, None, None, None, None, None, None, None
+        # optimize_asian(market_infos[-1])
+
+        if is_london_time(current_time):
+            res = check_lond_orders(market_infos[-1])
+        if is_ny_time(current_time) and False:
+            res = check_ny_orders(market_infos[-1])
+
+        if res == "BUY":
+            buy = True
+            last = "BUY"
+            sell = False
+            lots = 1.0
+            tp = market_infos[-1].get_close(1) + in_pips(TP)
+            sl = market_infos[-1].get_close(1) - in_pips(SL)
+            return buy, sell, None, None, tp, sl, lots, None
+
+        if res == "SELL":
+            sell = True
+            lots = 1.0
+            buy = False
+            last = "SELL"
+            tp = market_infos[-1].get_close(1) - in_pips(TP)
+            sl = market_infos[-1].get_close(1) + in_pips(SL)
+            return buy, sell, None, None, tp, sl, lots, None
+
+    return None, None, None, None, None, None, None, None
+
+
+orders = {}
+
+
+def analyse_open_order(id, bar_ago, profit):
+    global orders
+    past_proft = orders.get(id, [])
+
+    past_proft.append(profit)
+    orders[id] = past_proft
+
+    if len(past_proft) < 10: return None
+
+    series = pd.Series(past_proft)
+    avg_5 = series.rolling(window=7).mean()
+    avg_10 = series.rolling(window=12).mean()
+    if avg_5.iloc[-2] > avg_10.iloc[-2] and avg_5.iloc[-1] < avg_10.iloc[-1]:
+        return "CLOSE"
+
+
+def is_ok_o_no(res, dic):
+    if res == "BUY":
+        if dic['B'] < 0:
+            return None
+    if res == "SELL":
+        if dic['S'] > 0:
+            return None
+    return res
+
+
+prev_pos = None
+
+
+def check_for_ord_fuck(market_infos, orders):
+    global prev_pos
+    if not orders.empty:
+        try:
+            seconds_bars = (
+                    parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(
+                market_infos[-1].df["TIME"].iloc[-2])).total_seconds()
+
+        except Exception:
+            seconds_bars = 1
+        if seconds_bars == 0: seconds_bars = 1
+        seconds_from_orders = (
+                parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(orders['TIME'].iloc[-1])).total_seconds()
+        bar_ago = int(seconds_from_orders / seconds_bars) + 1
+        id = str(orders["ID"].iloc[-1])
+        current_price = market_infos[-1].get_close(1)
+        lots = str(orders["LOTS"].iloc[-1])
+        profit = orders["PROFIT"].iloc[-1]
+
+        open_at = orders["OPEN_AT"].iloc[-1]
+        current_time = market_infos[-1].df["TIME"].iloc[-1]
+        # res = analyse_open_order(id, bar_ago, profit)
+        res = None
+        if res == "CLOSE":
+            to_close = round(float(lots) / 2, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+        if profit < -111110 and bar_ago < 2:
+            to_close = round(float(lots) / 2, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+        if bar_ago > BARAGO:
+            to_close = round(float(lots) / 1, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+    if orders.empty or True:
+        current_time = market_infos[-1].df["TIME"].iloc[-1]
+
+        # optimize_asian(market_infos[-1])
+        res = check_channel(market_infos[-1])
+        if not orders.empty:
+            if prev_pos == res:
+                res = None
+            elif res is not None:
+                to_close = round(float(lots) / 1, 0)
+                if to_close == 0.0:
+                    to_close = lots
+                logger.info("DICO DI CHIUDERE " + str(res))
+                close = 'CLOSE,' + id + "," + str(to_close)
+                return None, None, close, None, None, None, None, None
+
+        if res == "BUY":
+            prev_pos = "BUY"
+            buy = True
+            last = "BUY"
+            sell = False
+            lots = 1.0
+            tp = market_infos[-1].get_close(1) + in_pips(TP)
+            sl = market_infos[-1].get_close(1) - in_pips(SL)
+            return buy, sell, None, None, tp, sl, lots, None
+
+        if res == "SELL":
+            prev_pos = "SELL"
+            sell = True
+            lots = 1.0
+            buy = False
+            last = "SELL"
+            tp = market_infos[-1].get_close(1) - in_pips(TP)
+            sl = market_infos[-1].get_close(1) + in_pips(SL)
+            return buy, sell, None, None, tp, sl, lots, None
+
+    return None, None, None, None, None, None, None, None
+
+
+def check_for_ord_break2(orders, bearish_candles, bullish_candles, market_infos, old, balances):
+    if not orders.empty:
+        try:
+            seconds_bars = (
+                    parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(
+                market_infos[-1].df["TIME"].iloc[-2])).total_seconds()
+
+        except Exception:
+            seconds_bars = 1
+        if seconds_bars == 0: seconds_bars = 1
+        seconds_from_orders = (
+                parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(orders['TIME'].iloc[-1])).total_seconds()
+        bar_ago = int(seconds_from_orders / seconds_bars) + 1
+        id = str(orders["ID"].iloc[-1])
+        current_price = market_infos[-1].get_close(1)
+        lots = str(orders["LOTS"].iloc[-1])
+        profit = orders["PROFIT"].iloc[-1]
+
+        open_at = orders["OPEN_AT"].iloc[-1]
+        current_time = market_infos[-1].df["TIME"].iloc[-1]
+
+        if is_london_time(current_time):
+            to_close = round(float(lots) / 1, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+        if bar_ago > 150 and profit > 25 or (bar_ago > 250 and profit < 0):
+            to_close = round(float(lots) / 1, 0)
+            if to_close == 0.0:
+                to_close = lots
+
+            close = 'CLOSE,' + id + "," + str(to_close)
+            return None, None, close, None, None, None, None, None
+
+    if orders.empty:
+        current_time = market_infos[-1].df["TIME"].iloc[-1]
+
+        # optimize_asian(market_infos[-1])
+
+        res = None
+        if is_asian_time(current_time):
+            res = check_as_orders(market_infos[-1])
+
+        if res == "BUY":
+            buy = True
+            last = "BUY"
+            sell = False
+            lots = 1.0
+            tp = market_infos[-1].get_close(1) + in_pips(TP)
+            sl = market_infos[-1].get_close(1) - in_pips(SL)
+            return buy, sell, None, None, tp, sl, lots, None
+
+        if res == "SELL":
+            sell = True
+            lots = 1.0
+            buy = False
+            last = "SELL"
+            tp = market_infos[-1].get_close(1) - in_pips(TP)
+            sl = market_infos[-1].get_close(1) + in_pips(SL)
+            return buy, sell, None, None, tp, sl, lots, None
+
+    return None, None, None, None, None, None, None, None
+
+
+def check_states(mi, print_=False):
+    df = mi.df
+    last_big_avg = mi.df[CROSS + "CLOSE"].ewm(span=400).mean().iloc[-1]
+    small_diff = mi.df[CROSS + "CLOSE"].ewm(span=5).mean().iloc[-1] - mi.df[CROSS + "CLOSE"].ewm(span=10).mean().iloc[
+        -1]
+    avg = mi.df[CROSS + "CLOSE"].ewm(span=200).mean()
+    close = mi.df[CROSS + "CLOSE"]
+
+    diff = -avg + close
+    diff = diff.ewm(span=150).mean()
+
+    if diff.iloc[-1] > 0 and diff.iloc[-2] < 0 and close.iloc[-1] > last_big_avg and small_diff > 0:
+        if print_:
+            print("DIFF IS: " + str(diff.iloc[-1]))
+            print("SMALL DIFF IS: " + str(small_diff))
+        return "BUY"
+
+    if diff.iloc[-1] < 0 and diff.iloc[-2] > 0 and close.iloc[-1] < last_big_avg and small_diff < 0:
+        if print_:
+            print("DIFF IS: " + str(diff.iloc[-1]))
+            print("SMALL DIFF IS: " + str(small_diff))
+        return "SELL"
+
 
 def check_for_orders(orders, bearish_candles, bullish_candles, market_infos, old, balances):
     global to_open
@@ -980,7 +1334,7 @@ def check_for_orders(orders, bearish_candles, bullish_candles, market_infos, old
         profit = orders["PROFIT"].iloc[-1]
 
         open_at = orders["OPEN_AT"].iloc[-1]
-
+        what_to_do = analyse_order(id, bar_ago, profit)
         if bar_ago % 5 == 0 and profit == 0:
             to_close = round(float(lots) / 1, 0)
             if to_close == 0.0:
@@ -997,7 +1351,7 @@ def check_for_orders(orders, bearish_candles, bullish_candles, market_infos, old
             return None, None, close, None, None, None, None, jr
 
         if bar_ago % 150 == 0 and profit < 0 and bar_ago >= 30:
-            to_close =  1.0
+            to_close = 1.0
             if to_close == 0.0:
                 to_close = lots
 
@@ -1058,4 +1412,224 @@ def check_for_orders(orders, bearish_candles, bullish_candles, market_infos, old
             tp = market_infos[-1].get_close(1) + in_pips(TP)
             sl = market_infos[-1].get_close(1) - in_pips(SL)
 
+    return buy, sell, close, scalp, tp, sl, lots, jr
+
+
+def tell_me_the_story_to_open(mi, param=-50):
+    avg_100 = mi.df.tail(500)[CROSS + "CLOSE"].rolling(window=100).mean()
+    closes = mi.df.tail(500)[CROSS + "CLOSE"]
+    diff = closes - avg_100
+    last_diff = diff.iloc[-1]
+    states = []
+    for item in list(diff)[param:]:
+        if item < 0:
+            states.append("SU")
+        else:
+            states.append("GIU")
+
+    g = [(x[0], len(list(x[1]))) for x in groupby(states)]
+    print(g)
+    if len(g) == 1:
+        if g[0][0] == "GIU":
+            return "SELL"
+        else:
+            return "BUY"
+
+
+def check_cash(market_infos, orders):
+    buy = sell = close = scalp = tp = sl = lots = jr = None
+    lots = 1.0
+    if orders.empty:
+        res = tell_me_the_story_to_open(market_infos[-1])
+        if res == "SELL":
+            sell = True
+            buy = False
+            last = "SELL"
+            tp = market_infos[-1].get_close(1) - in_pips(TP)
+            sl = market_infos[-1].get_close(1) + in_pips(SL)
+
+        if res == "BUY":
+            buy = True
+            last = "BUY"
+            sell = False
+            tp = market_infos[-1].get_close(1) + in_pips(TP)
+            sl = market_infos[-1].get_close(1) - in_pips(SL)
+
+    if not orders.empty:
+        res = tell_me_the_story_to_open(market_infos[-1])
+        if res is None:
+            id = str(orders["ID"].iloc[-1])
+            lots = str(orders["LOTS"].iloc[-1])
+            close = 'CLOSE,' + id + "," + str(lots)
+
+    return buy, sell, close, scalp, tp, sl, lots, jr
+
+
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
+def find_swing(mi):
+    df = mi.df
+    closes = list(df[CROSS + "CLOSE"])[-100:]
+    groups_c = int(len(closes) / 10)
+    groups = []
+    g = list(chunks(closes, groups_c))
+    g_min_max = []
+    for gr in g:
+        g_min_max.append((min(gr), max(gr)))
+
+    if all_monotone(g_min_max, decreasing=True):
+        return "SELL"
+    if all_monotone(g_min_max, decreasing=False):
+        return "BUY"
+
+
+def draw_line(res):
+    points_h = [x[1] for x in res[1]]
+    points_l = [x[0] for x in res[1]]
+    len = len(points_h)
+    x = np.arange(1, len + 1)
+    slope_h, intercept_h, r_value, p_value, std_err = stats.linregress(x, points_h)
+    slope_l, intercept_l, r_value, p_value, std_err = stats.linregress(x, points_l)
+
+
+def find_h_l(mi):
+    low = mi.df[CROSS + "CLOSE"].rolling(window=20).min().iloc[-1]
+    high = mi.df[CROSS + "CLOSE"].rolling(window=20).max().iloc[-1]
+    current = mi.df[CROSS + "CLOSE"].iloc[-1]
+    if current >= high:
+        return "BUY"
+    if current <= low:
+        return "SELL"
+
+
+def get_per_favore(market_infos, orders):
+    buy = sell = close = scalp = tp = sl = jr = None
+    res = None
+    lots = 1.0
+
+    if orders.empty or False:
+        res = find_h_l(market_infos[-1])
+        if res is not None:
+            logger.info("Found Swing")
+
+        if res == "SELL":
+            sell = True
+            buy = False
+            last = "SELL"
+            tp = market_infos[-1].get_close(1) - in_pips(TP)
+            sl = market_infos[-1].get_close(1) + in_pips(SL)
+
+        if res == "BUY":
+            buy = True
+            last = "BUY"
+            sell = False
+            tp = market_infos[-1].get_close(1) + in_pips(TP)
+            sl = market_infos[-1].get_close(1) - in_pips(SL)
+
+    return buy, sell, close, scalp, tp, sl, lots, jr
+
+
+def londra(mi):
+    df = pd.DataFrame.copy(mi.df)
+    df2 = pd.DataFrame.copy(mi.df)
+    last_big = mi.df[CROSS + "CLOSE"].ewm(span=100).mean().iloc[-1]
+    fast_avg = mi.df[CROSS + "CLOSE"].ewm(span=25).mean().iloc[-1]
+    previous_fast_avg = mi.df[CROSS + "CLOSE"].ewm(span=25).mean().iloc[-2]
+    current_price = mi.get_close(1)
+    close = mi.df[CROSS + "CLOSE"].iloc[-1]
+    previous_close = mi.df[CROSS + "CLOSE"].iloc[-2]
+    today = parse(df["TIME"].iloc[-1]).day
+    df = df.tail(200)
+
+    def is_today(x, today):
+        return (x.day == today)
+
+    def is_asian(x):
+        return x.hour < 10
+
+    m = (mi.df[CROSS + "CLOSE"] - mi.df[CROSS + "CLOSE"].ewm(span=25).mean()).tail(20).sum()
+    m = in_pips(m)
+    #s = (mi.df[CROSS + "CLOSE"] - mi.df[CROSS + "CLOSE"].ewm(span=25).mean()).tail(20).std()
+    #s = in_pips(s)
+
+    m_ = (mi.df[CROSS + "CLOSE"] - mi.df[CROSS + "CLOSE"].ewm(span=25).mean()).tail(21).head(20).sum()
+    m_ = in_pips(m)
+    s_ = (mi.df[CROSS + "CLOSE"] - mi.df[CROSS + "CLOSE"].ewm(span=25).mean()).tail(21).head(20).std()
+    s_ = in_pips(s)
+    # print("Mean is: " + str(m))
+    # print("Std is: " + str(s))
+    df["TIME"] = df["TIME"].apply(lambda x: parse(x))
+    df = df[df["TIME"].apply(lambda x: is_today(x, today)) == True]
+    df_asian = df[df["TIME"].apply(lambda x: is_asian(x)) == True]
+    max_asian = df_asian[CROSS + "CLOSE"].max()
+    min_asian = df_asian[CROSS + "CLOSE"].min()
+
+    if close > fast_avg and previous_close < previous_fast_avg and m > 0:
+        return "BUY"
+    if close < fast_avg and previous_close > previous_fast_avg and m < 0:
+        return "SELL"
+
+    return
+    if current_price > max_asian:
+        return "SELL"
+    if current_price < min_asian:
+        return "BUY"
+
+
+dates = {}
+
+
+def check_london_break(market_infos, orders):
+    buy = sell = close = scalp = tp = sl = jr = None
+
+    if not orders.empty:
+        try:
+            seconds_bars = (
+                    parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(
+                market_infos[-1].df["TIME"].iloc[-2])).total_seconds()
+
+        except Exception:
+            seconds_bars = 1
+        if seconds_bars == 0: seconds_bars = 1
+        seconds_from_orders = (
+                parse(market_infos[-1].df["TIME"].iloc[-1]) - parse(orders['TIME'].iloc[-1])).total_seconds()
+        bar_ago = int(seconds_from_orders / seconds_bars) + 1
+        id = str(orders["ID"].iloc[-1])
+        current_price = market_infos[-1].get_close(1)
+        lots = str(orders["LOTS"].iloc[-1])
+        profit = orders["PROFIT"].iloc[-1]
+
+        open_at = orders["OPEN_AT"].iloc[-1]
+        if (bar_ago > 4 and profit == 0) or (bar_ago > 5 and profit < 0) or (bar_ago > 4 and profit > 0):
+            to_close = round(float(lots) / 1, 0)
+            if to_close == 0.0:
+                to_close = lots
+            close = 'CLOSE,' + id + "," + str(lots)
+    global dates
+    lots = 1.0
+    res = londra(market_infos[-1])
+
+    hour = parse(market_infos[-1].df["TIME"].iloc[-1]).hour
+    day = parse(market_infos[-1].df["TIME"].iloc[-1]).date()
+    if hour < 8 or hour > 13 or not orders.empty or day in dates:
+        res = None
+    if res == "SELL":
+        sell = True
+        buy = False
+        last = "SELL"
+        tp = market_infos[-1].get_close(1) - in_pips(TP)
+        sl = market_infos[-1].get_close(1) + in_pips(SL)
+        dates[day] = 1
+
+    if res == "BUY":
+        buy = True
+        last = "BUY"
+        sell = False
+        tp = market_infos[-1].get_close(1) + in_pips(TP)
+        sl = market_infos[-1].get_close(1) - in_pips(SL)
+        dates[day] = 1
     return buy, sell, close, scalp, tp, sl, lots, jr

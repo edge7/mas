@@ -1,10 +1,10 @@
-import pandas as pd
-import time
-import os
 import logging
-from os import path
+import os
+import time
 from logging.config import fileConfig
+from os import path
 
+import pandas as pd
 from dateutil.parser import parse
 
 from utility.send_nots import notify
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 from utility.mql4_socket import can_i_run, end_loop, get_orders, get_balance
 from constants.constants import PATH, ACTION
-from utility.discovery import get_info, check_for_orders, check_for_ord
+from utility.discovery import get_info, check_london_break
 
 
 def insert_bearish(b, bearish_candles, limit=13):
@@ -40,13 +40,15 @@ def insert_market_info(mi, mis, limit=15):
     mis.append(mi)
     return mis
 
+
 def insert_balance(b, ba):
     if len(ba) >= 200:
         ba = ba[1:]
     ba.append(b)
     return ba
 
-def run_strategy(send_email = False):
+
+def run_strategy(send_email=False):
     def get_time(x):
         try:
             x = parse(x)
@@ -54,14 +56,16 @@ def run_strategy(send_email = False):
             x = None
         return x
 
-    #df = pd.read_csv('/home/edge7/Desktop/Documenti/dataEc/macroData.csv', sep=";")
-    #df['Time'] = df['Time'].apply(lambda x: get_time(x))
+    # df = pd.read_csv('/home/edge7/Desktop/Documenti/dataEc/macroData.csv', sep=";")
+    # df['Time'] = df['Time'].apply(lambda x: get_time(x))
     news = None
     bearish_candles = []
     bullish_candles = []
     market_infos = []
     balances = []
     old = None
+    ccc = 0
+    res = None
     while True:
         response = "OUT"
         # FLAG_GO
@@ -81,22 +85,24 @@ def run_strategy(send_email = False):
                 pass
         balances = insert_balance(balance, balances)
         orders = get_orders(PATH)
-        df = pd.read_csv(PATH + 'o.csv', sep=",").tail(8000).reset_index(drop = True)
-        if df.shape[0] < 51:
+        df = pd.read_csv(PATH + 'o.csv', sep=",").tail(8000).reset_index(drop=True)
+        if df.shape[0] < 16:
             end_loop(PATH, "OUT")
             continue
 
         market_info = get_info(df, news)
         market_infos = insert_market_info(market_info, market_infos)
-        #bear_candle, bull_candle = search_for_bullish_and_bearish_candlestick(market_info)
-        #bearish_candles = insert_bearish(bear_candle, bearish_candles)
-        #bullish_candles = insert_bullish(bull_candle, bullish_candles)
+        # bear_candle, bull_candle = search_for_bullish_and_bearish_candlestick(market_info)
+        # bearish_candles = insert_bearish(bear_candle, bearish_candles)
+        # bullish_candles = insert_bullish(bull_candle, bullish_candles)
+        # visualise_mymethod(market_infos)
 
-        buy, sell, close, scalp, tp, sl, lots, jr = check_for_ord(orders, bearish_candles, bullish_candles, market_infos, old, balances)
+
+        buy, sell, close, scalp, tp, sl, lots, jr = check_london_break(market_infos, orders)
 
         old = "OUT"
         if not jr and jr is not None:
-            size = str(lots) + ",noscalp,"+str(tp)+","+str(sl)+",JR"
+            size = str(lots) + ",noscalp," + str(tp) + "," + str(sl) + ",JR"
         else:
             size = str(lots) + ",noscalp," + str(tp) + "," + str(sl) + ",AA"
         if buy and not sell:
@@ -110,11 +116,12 @@ def run_strategy(send_email = False):
         if close is not None:
             response = close
             logger.info("CLOSE")
+            ccc = 0
 
         if send_email:
             if buy or sell or (close is not None):
                 notify(response)
-                response = "OUT"
+                #response = "OUT"
 
         # Write response and delete FLAG_GO
         end_loop(PATH, response)
@@ -122,4 +129,3 @@ def run_strategy(send_email = False):
 
 if __name__ == '__main__':
     run_strategy(send_email=False)
-
