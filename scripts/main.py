@@ -121,7 +121,7 @@ def run_strategy(send_email=False):
         if send_email:
             if buy or sell or (close is not None):
                 notify(response)
-                #response = "OUT"
+                # response = "OUT"
 
         # Write response and delete FLAG_GO
         end_loop(PATH, response)

@@ -1558,8 +1558,8 @@ def londra(mi):
 
     m_ = (mi.df[CROSS + "CLOSE"] - mi.df[CROSS + "CLOSE"].ewm(span=25).mean()).tail(21).head(20).sum()
     m_ = in_pips(m)
-    s_ = (mi.df[CROSS + "CLOSE"] - mi.df[CROSS + "CLOSE"].ewm(span=25).mean()).tail(21).head(20).std()
-    s_ = in_pips(s)
+    #s_ = (mi.df[CROSS + "CLOSE"] - mi.df[CROSS + "CLOSE"].ewm(span=25).mean()).tail(21).head(20).std()
+    #s_ = in_pips(s)
     # print("Mean is: " + str(m))
     # print("Std is: " + str(s))
     df["TIME"] = df["TIME"].apply(lambda x: parse(x))
