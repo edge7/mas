@@ -47,6 +47,8 @@ int OnInit()
    }
    else
       PrintFormat("Failed to open %s file, Error code = %d","FILE",GetLastError());   
+   for (int j = 1000; j>=2;j--)
+      writeDataBack(symbols, NUM_SYMBOLS,j );
    
 //---
    return(INIT_SUCCEEDED);
@@ -65,12 +67,12 @@ void OnDeinit(const int reason)
 void OnTick()
   {   
       bool newCandle = isNewCandle(Symbol());
-      
+
       if( ! newCandle){
           move_take_profit();
           return;
       }
-      
+      Print("NEW CANDLE");
       writeData(symbols, NUM_SYMBOLS);
       string action = readAction();
       process_action(action);
