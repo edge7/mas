@@ -332,14 +332,12 @@ void writeData(string &symbols[], int size){
 
 
 
-      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + FILE_NAME;
-      string dst_path = "D:\\MQL4\\o.csv";
+      //string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + FILE_NAME;
+      //string dst_path = "D:\\MQL4\\o.csv";
       
       // For live
-      //string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + FILE_NAME;
-      //string dst_path = "E:\\o.csv";
-
-
+      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + FILE_NAME;
+      string dst_path = "E:\\o.csv";
 
       CopyFileW(src_path, dst_path, false);
       FileDelete(NEW_DATA_NAME);
@@ -402,12 +400,12 @@ void writeData(string &symbols[], int size){
 
 
 
-      src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + NEW_DATA_NAME;
-      dst_path = "D:\\MQL4\\flag_go";
+      //src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + NEW_DATA_NAME;
+      //dst_path = "D:\\MQL4\\flag_go";
       
       // LIVE
-      // src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + NEW_DATA_NAME;
-      // dst_path = "E:\\flag_go";
+      src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + NEW_DATA_NAME;
+      dst_path = "E:\\flag_go";
 
 
       int res = CopyFileW(src_path, dst_path, false);
@@ -446,13 +444,13 @@ string readAction(){
 
 
 
-      string dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "strategy_done";
-      string src_path = "D:\\MQL4\\strategy_done";
+      //string dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "strategy_done";
+      //string src_path = "D:\\MQL4\\strategy_done";
       
       
       // LIVE
-      //string dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "strategy_done";
-      //string src_path = "E:\\strategy_done";
+      string dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "strategy_done";
+      string src_path = "E:\\strategy_done";
 
 
       bool res = CopyFileW(src_path, dst_path, false);
@@ -498,12 +496,12 @@ string readAction(){
 
 
 
-      dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "ACTION";
-      src_path = "D:\\MQL4\\ACTION";
+      //dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "ACTION";
+      //src_path = "D:\\MQL4\\ACTION";
       
       // LIVE
-      //dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "ACTION";
-      //src_path = "E:\\ACTION";
+      dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "ACTION";
+      src_path = "E:\\ACTION";
 
 
       res = CopyFileW(src_path, dst_path, false);
@@ -998,12 +996,12 @@ void process_action(string action){
 
 
 
-      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "orders";
-      string dst_path = "D:\\MQL4\\orders";
+      //string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "orders";
+      //string dst_path = "D:\\MQL4\\orders";
       
       // LIVE
-      //string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "orders";
-      //string dst_path = "E:\\orders";
+      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "orders";
+      string dst_path = "E:\\orders";
 
 
       CopyFileW(src_path, dst_path, false);
