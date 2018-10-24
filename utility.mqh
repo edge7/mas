@@ -31,7 +31,7 @@ bool isNewCandle(string symbol)
 
 void writeData(string &symbols[], int size){
      
-     string toWrite = TimeToString(iTime(Symbol(), 0, 0));
+     string toWrite = TimeToString(iTime(Symbol(), 0, 1));
      // Iterate for each Symbol
      for( int i = 0; i< size; i++){
      
@@ -86,8 +86,8 @@ void writeData(string &symbols[], int size){
       
 
       //ShellExecuteW (NULL, "open", "cmd", "/c copy /Y " + FILE_NAME +  " "+ "C:\\Users\\ed7\\Desktop", NULL, NULL);
-      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + FILE_NAME;
-      string dst_path = "D:\\MQL4\\o.csv";
+      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + FILE_NAME;
+      string dst_path = "E:\\o.csv";
       CopyFileW(src_path, dst_path, false);
 
       
@@ -109,8 +109,8 @@ void writeData(string &symbols[], int size){
           PrintFormat("Failed to open %s file, Error code = %d","FILE",GetLastError());
           
           
-      src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + NEW_DATA_NAME;
-      dst_path = "D:\\MQL4\\flag_go";
+      src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + NEW_DATA_NAME;
+      dst_path = "E:\\flag_go";
       int res = CopyFileW(src_path, dst_path, false);
       while(res == false) Print("ERROR FLAG GO");
       FileDelete(src_path);
@@ -120,8 +120,8 @@ void writeData(string &symbols[], int size){
 
 string readAction(){
 
-      string dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "strategy_done";
-      string src_path = "D:\\MQL4\\strategy_done";
+      string dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "strategy_done";
+      string src_path = "E:\\strategy_done";
       bool res = CopyFileW(src_path, dst_path, false);
       
       while(res != true){
@@ -134,8 +134,8 @@ string readAction(){
       
       // Read Action from strategy -- if here strategy has done 
       
-      dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "ACTION";
-      src_path = "D:\\MQL4\\ACTION";
+      dst_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "ACTION";
+      src_path = "E:\\ACTION";
       res = CopyFileW(src_path, dst_path, false);
      
       
@@ -252,8 +252,8 @@ void process_action(string action){
           PrintFormat("Failed to open %s file, Error code = %d","FILE",GetLastError());
       
       //ShellExecuteW (NULL, "open", "cmd", "/c copy /Y " + FILE_NAME +  " "+ "C:\\Users\\ed7\\Desktop", NULL, NULL);
-      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\tester\\files\\" + "orders";
-      string dst_path = "D:\\MQL4\\orders";
+      string src_path = "C:\\Users\\ed7\\AppData\\Roaming\\MetaQuotes\\Terminal\\1DAFD9A7C67DC84FE37EAA1FC1E5CF75\\MQL4\\Files\\" + "orders";
+      string dst_path = "E:\\orders";
       CopyFileW(src_path, dst_path, false);
 }
 
@@ -348,5 +348,65 @@ void move_take_profit(){
          }
       }
    }
+
+}
+
+
+void writeDataBack(string &symbols[], int size, int j){
+     
+     string toWrite = TimeToString(iTime(Symbol(), 0, j));
+     // Iterate for each Symbol
+     for( int i = 0; i< size; i++){
+     
+          double close = iClose(symbols[i], 0, j);
+          double open = iOpen(symbols[i], 0, j);
+          double high = iHigh(symbols[i], 0, j);
+          double low = iLow(symbols[i], 0, j);
+          double body = 0;
+          double highPips = 0;
+          double lowInPips = 0;
+          // Green candle
+          if( close >= open) {
+              body = close - open;
+              lowInPips = open - low;
+              highPips = high - close;
+          }
+          else{
+               body = close - open;
+               lowInPips = close - low;
+               highPips = high - open;
+          }
+          double highBand = high - iBands(symbols[i], 0, 50, 2.55, 0, PRICE_HIGH, 1, j);
+          double lowBand = low - iBands(symbols[i], 0, 50, 2.55, 0, PRICE_LOW, 2, j);
+          double distFromMVAVG100 = close - iMA(symbols[i], 0, 100, 0, 1, PRICE_CLOSE, j);
+          double distFromMVAVG200 = close - iMA(symbols[i], 0, 150, 0, 1, PRICE_CLOSE, j);
+          double distFromMVAVG25 = close - iMA(symbols[i], 0, 50, 0, 1, PRICE_CLOSE, j);
+          double avg25 = iMA(symbols[i], 0, 20, 0, 1, PRICE_CLOSE, j);
+          double avg50 = iMA(symbols[i], 0, 50, 0, 1, PRICE_CLOSE, j);
+          //toWrite = StringConcatenate(toWrite, ",", DoubleToStr(close, 5), ",", DoubleToStr(body, 5), ",", DoubleToStr(lowInPips, 5), ",", DoubleToStr(highPips, 5), 
+          //
+          // {"_CLOSE", "_BODY", "_LOWINPIPS", "_HIGHINPIPS", "_HIGHBAND50", "_LOWBAND50", "_DISTAVG200", "_DISTAVG100" };
+          toWrite = StringConcatenate(toWrite, ",", DoubleToStr(close, 5), ",", DoubleToStr(body, 5), ",", DoubleToStr(lowInPips, 5), ",", DoubleToStr(highPips, 5), "," , DoubleToStr(highBand, 5), ",", DoubleToStr(lowBand, 5), ",", DoubleToStr(distFromMVAVG200), ",", DoubleToStr(distFromMVAVG100,5), ",", DoubleToStr(distFromMVAVG25, 5), "," + DoubleToStr(open, 5) , "," , DoubleToStr(avg25, 5) , "," , DoubleToStr(avg50, 5));   
+         
+        
+     }
+      
+      ResetLastError();
+      int file_handle=FileOpen(FILE_NAME, FILE_READ|FILE_WRITE);
+      if( file_handle != INVALID_HANDLE)
+      { 
+          FileSeek(file_handle, 0, SEEK_END);
+          PrintFormat("%s file is available for writing","FILE");
+           
+          FileWrite(file_handle, toWrite);
+            //--- close the file
+          FileClose(file_handle);
+       
+       }
+       else
+          PrintFormat("Failed to open %s file, Error code = %d","FILE",GetLastError());
+      
+      
+     
 
 }
