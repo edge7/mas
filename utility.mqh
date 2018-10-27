@@ -258,7 +258,8 @@ void writeData(string &symbols[], int size){
 
 
 
-          toWrite = StringConcatenate(toWrite, ",", DoubleToStr(close, 5), ",", DoubleToStr(body, 5), ",", DoubleToStr(lowInPips, 5), ",", DoubleToStr(highPips, 5), "," , DoubleToStr(highBand, 5), ",", DoubleToStr(lowBand, 5), ",", DoubleToStr(distFromMVAVG200), ",", DoubleToStr(distFromMVAVG100,5), ",", DoubleToStr(distFromMVAVG25, 5), "," + DoubleToStr(open, 5) , "," , DoubleToStr(avg25, 5) , "," , DoubleToStr(avg50, 5));   
+          toWrite = StringConcatenate(toWrite, ",", DoubleToStr(close, 5), ",", DoubleToStr(body, 5), ",", DoubleToStr(lowInPips, 5), ",", DoubleToStr(highPips, 5), "," , DoubleToStr(highBand, 5), ",", DoubleToStr(lowBand, 5), ",", DoubleToStr(distFromMVAVG200), ",", DoubleToStr(distFromMVAVG100,5), ",", DoubleToStr(distFromMVAVG25, 5), "," + DoubleToStr(open, 5) , "," , DoubleToStr(avg25, 5) , "," , DoubleToStr(avg50, 5),
+          ",", DoubleToStr(low, 5), ",", DoubleToStr(high, 5));
 
 
      }
@@ -929,16 +930,7 @@ void process_action(string action){
 
 
           FileWrite(file_handle, "ID", "OPEN_AT", "TIME", "SYMBOL", "LOTS", "PROFIT");
-
-
-
-          
-
-
-
           int total = OrdersTotal();
-
-
 
           for( int pos = 0; pos < total; pos ++){
 
@@ -946,12 +938,7 @@ void process_action(string action){
 
              if(OrderSelect(pos, SELECT_BY_POS) == false) continue;
 
-
-
              FileWrite(file_handle, OrderTicket(), OrderOpenPrice(), OrderOpenTime(),
-
-
-
              OrderSymbol(), OrderLots(), OrderProfit());
 
 
@@ -1743,8 +1730,8 @@ bool HLineCreate(const long            chart_ID=0,        // chart's ID
           //toWrite = StringConcatenate(toWrite, ",", DoubleToStr(close, 5), ",", DoubleToStr(body, 5), ",", DoubleToStr(lowInPips, 5), ",", DoubleToStr(highPips, 5), 
           //
           // {"_CLOSE", "_BODY", "_LOWINPIPS", "_HIGHINPIPS", "_HIGHBAND50", "_LOWBAND50", "_DISTAVG200", "_DISTAVG100" };
-          toWrite = StringConcatenate(toWrite, ",", DoubleToStr(close, 5), ",", DoubleToStr(body, 5), ",", DoubleToStr(lowInPips, 5), ",", DoubleToStr(highPips, 5), "," , DoubleToStr(highBand, 5), ",", DoubleToStr(lowBand, 5), ",", DoubleToStr(distFromMVAVG200), ",", DoubleToStr(distFromMVAVG100,5), ",", DoubleToStr(distFromMVAVG25, 5), "," + DoubleToStr(open, 5) , "," , DoubleToStr(avg25, 5) , "," , DoubleToStr(avg50, 5));   
-         
+        toWrite = StringConcatenate(toWrite, ",", DoubleToStr(close, 5), ",", DoubleToStr(body, 5), ",", DoubleToStr(lowInPips, 5), ",", DoubleToStr(highPips, 5), "," , DoubleToStr(highBand, 5), ",", DoubleToStr(lowBand, 5), ",", DoubleToStr(distFromMVAVG200), ",", DoubleToStr(distFromMVAVG100,5), ",", DoubleToStr(distFromMVAVG25, 5), "," + DoubleToStr(open, 5) , "," , DoubleToStr(avg25, 5) , "," , DoubleToStr(avg50, 5),
+          ",", DoubleToStr(low, 5), ",", DoubleToStr(high, 5));
         
      }
       

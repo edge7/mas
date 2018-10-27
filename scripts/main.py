@@ -7,6 +7,9 @@ from os import path
 import pandas as pd
 from dateutil.parser import parse
 
+from market_info.market_info import CROSS
+from risk_management.low_risk import risk_management
+from utility.adjust import adjust_data
 from utility.send_nots import notify
 
 log_file_path = path.join(path.dirname(path.abspath(__file__)), 'logging_config.ini')
@@ -42,20 +45,13 @@ def insert_market_info(mi, mis, limit=15):
 
 
 def insert_balance(b, ba):
-    if len(ba) >= 200:
+    if len(ba) >= 15500:
         ba = ba[1:]
     ba.append(b)
     return ba
 
 
 def run_strategy(send_email=False):
-    def get_time(x):
-        try:
-            x = parse(x)
-        except Exception as e:
-            x = None
-        return x
-
     # df = pd.read_csv('/home/edge7/Desktop/Documenti/dataEc/macroData.csv', sep=";")
     # df['Time'] = df['Time'].apply(lambda x: get_time(x))
     news = None
@@ -79,13 +75,15 @@ def run_strategy(send_email=False):
         si = True
         while si:
             try:
-                balance = float(get_balance(PATH))
+                balance = get_balance(PATH)
+                balance.split(',')[1]
                 si = False
             except Exception:
                 pass
         balances = insert_balance(balance, balances)
         orders = get_orders(PATH)
         df = pd.read_csv(PATH + 'o.csv', sep=",").tail(8000).reset_index(drop=True)
+        df = adjust_data(df, CROSS, candle=4)
         if df.shape[0] < 16:
             end_loop(PATH, "OUT")
             continue
@@ -97,9 +95,10 @@ def run_strategy(send_email=False):
         # bullish_candles = insert_bullish(bull_candle, bullish_candles)
         # visualise_mymethod(market_infos)
 
-
         buy, sell, close, scalp, tp, sl, lots, jr = check_london_break(market_infos, orders)
 
+        if buy or sell:
+            lots = risk_management(balances)
         old = "OUT"
         if not jr and jr is not None:
             size = str(lots) + ",noscalp," + str(tp) + "," + str(sl) + ",JR"

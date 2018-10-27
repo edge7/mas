@@ -13,7 +13,7 @@
 //+------------------------------------------------------------------+
 
 string symbols [] = {"uer"};
-string indicators [] = {"_CLOSE", "_BODY", "_LOWINPIPS", "_HIGHINPIPS", "_HIGHBAND50", "_LOWBAND50", "_DISTAVG200", "_DISTAVG100", "_DISTAVG25", "_OPEN", "_AVG25", "_AVG50"};
+string indicators [] = {"_CLOSE", "_BODY", "_LOWINPIPS", "_HIGHINPIPS", "_HIGHBAND50", "_LOWBAND50", "_DISTAVG200", "_DISTAVG100", "_DISTAVG25", "_OPEN", "_AVG25", "_AVG50", "_LOW", _"HIGH"};
 
 //string indicators [] = {"_CLOSE", "_HIGHBAND50", "_LOWBAND50", "_DISTAVG100", "_DISTAVG50" };
 int NUM_SYMBOLS = ArraySize(symbols);
