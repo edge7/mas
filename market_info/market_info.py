@@ -1,6 +1,8 @@
 from dateutil.parser import parse
 
-CROSS = "USDCAD_"
+CROSS = "USDJPY_"
+# USDJPY, USDCAD OTTIMI Inizio 2017-05-03
+#CADJPY NO, perchè sembra poco liquido per such a TP
 from copy import deepcopy
 
 LONG_TREND = CROSS + 'DISTAVG200'
@@ -390,7 +392,8 @@ class MarketInfo(object):
 
     def search_for_info(self):
         return
-        #self.read_news()
+        self.read_news()
+        return
         self.search_for_short_trend()
         self.search_long_trend()
         self.search_medium_trend()

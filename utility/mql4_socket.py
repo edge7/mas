@@ -37,6 +37,15 @@ def get_orders(PATH):
     except FileNotFoundError:
         logger.warning("File is not found, ignore this error if this is the first run ")
     finally: return df
+def write_trend(t):
+    try:
+        os.remove(PATH + "TREND")
+    except Exception:
+        pass
+    #yyyy.mm.dd hh:mi
+    out = t.t1.strftime("%Y.%m.%d %H:%M") + "," + str(t.t2.strftime("%Y.%m.%d %H:%M")) + "," + str(t.p1) + "," + str(t.p2)
+    with open(os.path.join(PATH, 'TREND'), 'w') as f:
+        f.write(out)
 
 def write_sup_res(out, close):
 

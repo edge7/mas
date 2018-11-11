@@ -8,6 +8,12 @@ def adjust_data(df, CROSS, candle = 4, adjust_time=0):
     to_keep = ["TIME", CROSS + "CLOSE", CROSS + "OPEN", CROSS + "HIGH", CROSS + "LOW" ]
     df =  df[to_keep]
     df["TIME"] = df["TIME"].apply(lambda x: datetime.strptime(x, '%Y.%m.%d %H:%M') -timedelta(hours=adjust_time) )
+    for col in df.columns:
+        if "TIME" == col:
+            continue
+        else:
+            continue
+        df[col] = df[col].rolling(window = 5).mean()
     return df
     res = df[df["TIME"].apply(lambda x: x.hour) == 1].index[0]
     df_1 = df.iloc[res:].reset_index(drop=True)
